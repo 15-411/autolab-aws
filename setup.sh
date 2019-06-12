@@ -63,7 +63,10 @@ logit 'Installing Ruby 2.2.2...'
 sudo apt-add-repository -y ppa:rael-gc/rvm
 sudo apt-get update
 sudo apt-get -y install rvm
-rvm reload
+sudo usermod -aG ubuntu rvm
+newgrp rvm
+# shellcheck disable=SC1091
+source /etc/profile.d/rvm.sh
 sudo /usr/share/rvm/bin/rvm install ruby-2.2.2
 sudo chown ubuntu:ubuntu -R ~/.rvm
 
