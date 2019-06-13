@@ -63,12 +63,15 @@ logit 'Installing Ruby 2.2.2...'
 sudo apt-add-repository -y ppa:rael-gc/rvm
 sudo apt-get update
 sudo apt-get -y install rvm
-sudo usermod -aG ubuntu rvm
-newgrp rvm
+sudo usermod -aG rvm ubuntu
 # shellcheck disable=SC1091
 source /etc/profile.d/rvm.sh
 sudo /usr/share/rvm/bin/rvm install ruby-2.2.2
 sudo chown ubuntu:ubuntu -R ~/.rvm
+cat << EOF > ~/.bash_profile
+source ~/.bashrc
+export PATH=~rvm/gems/ruby-2.2.2/wrappers:$PATH
+EOF
 
 # 2. Clone latest versions of Autolab and Tango repos.
 logit 'Cloning Tango and Autolab...'
@@ -91,7 +94,7 @@ aws_secret_access_key = $AWS_SECRET_KEY
 EOF
 
 # Initialize useful script for use in both make_dev and make_prod.
-read -r replace_config << 'EOF'
+replace_config=$(cat << 'EOF'
 replace_config () {
   key=$1
   value=$2
@@ -99,6 +102,30 @@ replace_config () {
   sed "s/#$key =/ $key =/g ; s/\\<$key = .*/$key = $value/g"
 }
 EOF
+)
+
+# Script for counting the number of screens.
+screen_count=$(cat << "EOF"
+screen_count=$(screen -ls | grep $'^\t' | wc -l)
+if [ "$screen_count" != 0 ]; then
+  echo "ERROR: startup script already run, so the screens are already started."
+  echo "To see the running screens, run:"
+  echo "  screen -ls"
+  echo "You can enter the screens with:"
+  echo "  screen -r autolab"
+  echo "  screen -r tango"
+  echo "  screen -r redis"
+  echo "Once you are in the screen, you can detach (which does not kill the screen)"
+  echo "  by running ^A + d (which is Cmd-A followed by d on Mac)."
+  echo "To kill the screen you are attached to, run ^A + :kill (which is Cmd-A"
+  echo "  followed by typing ':kill and then pressing enter.)"
+  exit 1
+fi
+EOF
+)
+
+# Don't know where this directory comes from. :(
+rmdir 1 || true
 
 # Script for setting up dev-specific things.
 cat << EOF > ~ubuntu/make_dev
@@ -111,23 +138,23 @@ echo "so that they can access the AWS private key $SSH_KEY for sshing into the"
 echo "other running instances."
 
 # Initialize autograde config template
-< ~/Autolab/config/autogradeConfig.rb.template \
+< ~/Autolab/config/autogradeConfig.rb.template \\
   replace_config RESTFUL_HOST "'localhost'" |
   replace_config RESTFUL_PORT 3000 |
   replace_config RESTFUL_KEY "'test'" > ~/Autolab/config/autogradeConfig.rb
 
 # Initialize devise for mailer.
-< ~/Autolab/config/initializers/devise.rb.template \
+< ~/Autolab/config/initializers/devise.rb.template \\
   replace_config config.secret_key "''" |
   replace_config config.mailer_sender "'creds@notolab.ml'" > ~/Autolab/config/initializers/devise.rb
 
 # Initialize mailer
-< ~/Autolab/config/environments/production.template.rb \
+< ~/Autolab/config/environments/production.template.rb \\
   replace_config config.action_mailer.delivery_method :smtp |
   replace_config config.action_mailer.smtp_settings "{ address: 'email-smtp.us-east-1.amazonaws.com', port: 587, enable_starttls_auto: true, authentication: 'login', user_name: '$MAILER_USERNAME', password: '$MAILER_PASSWORD', domain: 'notolab.ml' }" > ~/Autolab/config/environments/production.rb
 
 # Initialize config
-< ~/Tango/config.template.py \
+< ~/Tango/config.template.py \\
   replace_config VMMS_NAME '"ec2SSH"' |
   replace_config CANCEL_TIMEOUT 30 |
   replace_config AUTODRIVER_LOGGING_TIME_ZONE "'America/New_York'" |
@@ -156,14 +183,22 @@ cp ~/Autolab/config/school.yml.template ~/Autolab/config/school.yml
   RAILS_ENV=development bundle exec rake db:setup
 )
 
-cat << STARTUP > ~ubuntu/startup.sh
+cat << "STARTUP" > ~ubuntu/startup.sh
 #!/bin/bash -e
 # Run this script to get the webserver running.
+
+$screen_count
+
+echo "Initializing redis server..."
 screen -S redis -dm redis-server
+echo "Initializing Tango..."
 screen -S tango -dm bash -c 'cd ~/Tango ; concurrently -n jobManager,server "python jobManager.py" "python restful-tango/server.py"'
+echo "Initializing Autolab..."
 screen -S autolab -dm bash -c 'cd ~/Autolab ; sudo env PATH="\$PATH" bundle exec rails s -p 80 -b 0.0.0.0'
 STARTUP
 chmod +x ~ubuntu/startup.sh
+echo 'Success :) Run ./startup.sh to start the web server.'
+rm make_dev make_prod
 EOF
 
 # Script for setting up prod-specific things.
@@ -174,20 +209,28 @@ $replace_config
 
 sudo add-apt-repository ppa:certbot/certbot
 sudo apt-get update
-sudo apt-get install -y \
-  nginx \
-  python-certbot-nginx \
+sudo apt-get install -y \\
+  nginx \\
+  python-certbot-nginx \\
   ;
 sudo certbot --nginx
 
-cat << STARTUP > ~ubuntu/startup.sh
+cat << "STARTUP" > ~ubuntu/startup.sh
 #!/bin/bash -e
 # Run this script to get the webserver running.
+
+$screen_count
+
+echo "Initializing redis server..."
 screen -S redis -dm redis-server
+echo "Initializing Tango..."
 screen -S tango -dm bash -c 'cd ~/Tango ; concurrently -n jobManager,server "python jobManager.py" "python restful-tango/server.py"'
+echo "Initializing Autolab..."
 screen -S autolab -dm bash -c 'cd ~/Autolab ; sudo env PATH="\$PATH" bundle exec rails server -p 15411 -e production'
 STARTUP
 chmod +x ~ubuntu/startup.sh
+echo 'Success :) Run ./startup.sh to start the web server.'
+rm make_dev make_prod
 EOF
 
 chmod +x ~ubuntu/make_dev
