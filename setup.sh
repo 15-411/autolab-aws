@@ -226,12 +226,24 @@ screen -S autolab -dm bash -c 'cd ~/Autolab ; sudo env PATH="\$PATH" bundle exec
 echo "Everything is running, and once you have pointed the elastic IP for dev.notolab.ml at"
 echo "this instance, you should be able to access dev-notolab at this URL:"
 echo "  https://dev.notolab.ml"
-echo "Once you have created and verified a user, you can promote yourself to admin"
-echo "by running this command from the Autolab directory:"
-echo "  bundle exec rake 'admin:promote_user[your@email.goes.here]'"
+echo "You can run the (interactive) script ./create_dev_account to create an account you"
+echo "can log into from the 'Developer Login' page."
 STARTUP
 
-chmod +x ~ubuntu/startup.sh
+cat << "CREATE_DEV_ACCOUNT" > ~ubuntu/create_dev_account
+#!/bin/bash
+# Since mailer doesn't work on dev notolab, this script can be run (without arguments)
+# to create a developer user you can log in with at "Developer Login".
+read -p "Email? (no single quotes) " email
+read -p "First name? (no single quotes) " fn
+read -p "Last name? (no single quotes) " ln
+sqlite3 Autolab/db/db.sqlite3 << SQLITE
+INSERT INTO users (email, first_name, last_name, confirmed_at, administrator) VALUES ('$email', '$fn', '$ln', 1, 1);
+SQLITE
+echo "User successfully created. You can now use Developer Login with that user at dev.notolab.ml"
+CREATE_DEV_ACCOUNT
+
+chmod +x ~ubuntu/startup.sh ~ubuntu/create_dev_account
 echo 'Success :) Run ./startup.sh to start the web server.'
 rm make_dev make_prod README
 EOF
@@ -337,7 +349,8 @@ echo "Initializing Tango..."
 screen -S tango -dm bash -c 'cd ~/Tango ; concurrently -n jobManager,server "python jobManager.py" "python restful-tango/server.py"'
 echo "Initializing Autolab..."
 screen -S autolab -dm bash -c 'cd ~/Autolab ; sudo env PATH="\$PATH" bundle exec rails server -p 15411 -e production'
-echo "Everything is running, and you should be able to access notolab at this URL:"
+echo "Everything is running, and once you have pointed the elastic IP for notolab.ml at"
+echo "this instance, you should be able to access prod-notolab at this URL:"
 echo "  https://notolab.ml"
 echo "Once you have created and verified a user, you can promote yourself to admin"
 echo "by running this command from the Autolab directory:"
