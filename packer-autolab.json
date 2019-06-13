@@ -1,6 +1,6 @@
 {
   "variables": {
-    "ami_name": "15411_autolab_{{timestamp}}.img",
+    "ami_name": "15411_autolab_{{isotime \"2006-01-02_15-04-05\"}}.img",
     "aws_access_key": "{{env `AWS_ACCESS_KEY`}}",
     "aws_secret_key": "{{env `AWS_SECRET_KEY`}}",
     "mailer_username": "{{env `MAILER_USERNAME`}}",
@@ -25,7 +25,10 @@
     "instance_type": "t2.large",
     "ssh_username": "ubuntu",
     "ami_description": "AMI automatically built from autolab-aws repository.",
-    "ami_name": "{{user `ami_name`}}"
+    "ami_name": "{{user `ami_name`}}",
+    "tags": {
+      "Name": "{{user `ami_name`}}"
+    }
   }],
   "provisioners": [
     {

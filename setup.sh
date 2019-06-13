@@ -76,7 +76,7 @@ sudo /usr/share/rvm/bin/rvm install ruby-2.2.2
 sudo chown ubuntu:ubuntu -R ~/.rvm
 cat << "EOF" > ~/.bash_profile
 source ~/.bashrc
-export PATH=~rvm/gems/ruby-2.2.2/wrappers:$PATH
+export PATH=~/.rvm/gems/ruby-2.2.2/wrappers:$PATH
 EOF
 
 # 2. Clone latest versions of Autolab and Tango repos.
@@ -123,8 +123,9 @@ if [ "$screen_count" != 0 ]; then
   echo "  screen -r redis"
   echo "Once you are in the screen, you can detach (which does not kill the screen)"
   echo "  by running ^A + d (which is Cmd-A followed by d on Mac)."
-  echo "To kill the screen you are attached to, run ^A + :kill (which is Cmd-A"
-  echo "  followed by typing ':kill and then pressing enter.)"
+  echo "To kill the screen you are attached to, first interrupt the running"
+  echo "  program with ^C, and then run ^A + :kill (which is Cmd-A  followed"
+  echo "  by typing ':kill and then pressing enter.)"
   exit 1
 fi
 EOF
