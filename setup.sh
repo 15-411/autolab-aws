@@ -238,8 +238,8 @@ $replace_config
 sudo add-apt-repository -y ppa:certbot/certbot
 sudo apt-get update
 sudo apt-get install -y \\
-  my-sql-client \\
-  my-sql-server \\
+  mysql-client \\
+  mysql-server \\
   nginx \\
   python-certbot-nginx \\
   ;
@@ -270,8 +270,8 @@ mysql_password=\$(tr -dc 'a-f0-9' < /dev/urandom | head -c16)
   replace_config config.action_mailer.default_url_options "{protocol: 'https', host: 'notolab.ml'}" |
   uncomment_out config.action_mailer.smtp_settings |
   replace_config config.action_mailer.smtp_settings "{ address: 'email-smtp.us-east-1.amazonaws.com', port: 587, enable_starttls_auto: true, authentication: 'login', user_name: '$MAILER_USERNAME', password: '$MAILER_PASSWORD', domain: 'notolab.ml' }" |
-  replace_config sender_address "\\\"NOTIFIER\\\" <notifications@notolab.ml>" |
-  replace_config exception_recipients: "'$email_for_errors'" > ~/Autolab/config/environments/production.rb
+  replace_config sender_address "\\"\\\\\\\\\\"NOTIFIER\\\\\\\\\\" <notifications@notolab.ml>\\"," |
+  replace_config exception_recipients "'$email_for_errors'" > ~/Autolab/config/environments/production.rb
 
 # Set up database
 < ~/Autolab/config/database.yml.template \\
