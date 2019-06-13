@@ -10,6 +10,12 @@ logit () {
 
 logit 'Starting script...'
 
+sleep_time=120
+if [ ! -z "$sleep_time" ]; then
+  logit "Sleeping for $sleep_time seconds to allow for sufficient setup for Ubuntu..."
+  sleep $sleep_time
+fi
+
 # 0. Environment validation
 logit 'Validating environment...'
 if [ -z "$AWS_SECRET_KEY" ]; then
