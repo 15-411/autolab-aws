@@ -111,12 +111,12 @@ replace_config () {
 
 uncomment_out () {
   line=$1
-  sed -e "s/^\([[:space:]]*\)#[[:space:]]*$key\>/\1$key/g"
+  sed -e "s/^\([[:space:]]*\)#[[:space:]]*$line\>/\1$line/g"
 }
 
 comment_out () {
   line=$1
-  sed -e "s/^\([[:space:]]*\)$key\>/\1# $key/g"
+  sed -e "s/^\([[:space:]]*\)$line\>/\1# $line/g"
 }
 EOF
 )
@@ -223,7 +223,8 @@ echo "Initializing Tango..."
 screen -S tango -dm bash -c 'cd ~/Tango ; concurrently -n jobManager,server "python jobManager.py" "python restful-tango/server.py"'
 echo "Initializing Autolab..."
 screen -S autolab -dm bash -c 'cd ~/Autolab ; sudo env PATH="\$PATH" bundle exec rails s -p 80 -b 0.0.0.0'
-echo "Everything is running, and you should be able to access notolab at this URL:"
+echo "Everything is running, and once you have pointed the elastic IP for dev.notolab.ml at"
+echo "this instance, you should be able to access dev-notolab at this URL:"
 echo "  https://dev.notolab.ml"
 echo "Once you have created and verified a user, you can promote yourself to admin"
 echo "by running this command from the Autolab directory:"
