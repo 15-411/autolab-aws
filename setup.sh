@@ -223,7 +223,13 @@ echo "Initializing Tango..."
 screen -S tango -dm bash -c 'cd ~/Tango ; concurrently -n jobManager,server "python jobManager.py" "python restful-tango/server.py"'
 echo "Initializing Autolab..."
 screen -S autolab -dm bash -c 'cd ~/Autolab ; sudo env PATH="\$PATH" bundle exec rails s -p 80 -b 0.0.0.0'
+echo "Everything is running, and you should be able to access notolab at this URL:"
+echo "  https://dev.notolab.ml"
+echo "Once you have created and verified a user, you can promote yourself to admin"
+echo "by running this command from the Autolab directory:"
+echo "  bundle exec rake 'admin:promote_user[your@email.goes.here]'"
 STARTUP
+
 chmod +x ~ubuntu/startup.sh
 echo 'Success :) Run ./startup.sh to start the web server.'
 rm make_dev make_prod README
@@ -303,6 +309,18 @@ CREATE USER 'autolab'@'localhost' IDENTIFIED BY '\$mysql_password';
 GRANT ALL PRIVILEGES ON *.* TO 'autolab'@'localhost' WITH GRANT OPTION;
 DB
 
+# Finally, set up the database.
+( cd Autolab
+  RAILS_ENV=production bundle exec rake db:reset
+  RAILS_ENV=production bundle exec rake assets:precompile
+)
+
+# TODO: This site config stuff
+# add site config to /etc/nginx/sites_available/autolab (redirect to http://127.0.0.1:15411 using proxy_pass)
+# enable site config by creating a symlink and restarting nginx:
+# sudo ln -s /etc/nginx/sites-available/autolab autolab
+# sudo service nginx restart
+
 # TODO: decide how to present certbot stuff.
 # sudo certbot --nginx
 
@@ -318,7 +336,13 @@ echo "Initializing Tango..."
 screen -S tango -dm bash -c 'cd ~/Tango ; concurrently -n jobManager,server "python jobManager.py" "python restful-tango/server.py"'
 echo "Initializing Autolab..."
 screen -S autolab -dm bash -c 'cd ~/Autolab ; sudo env PATH="\$PATH" bundle exec rails server -p 15411 -e production'
+echo "Everything is running, and you should be able to access notolab at this URL:"
+echo "  https://notolab.ml"
+echo "Once you have created and verified a user, you can promote yourself to admin"
+echo "by running this command from the Autolab directory:"
+echo "  bundle exec rake 'admin:promote_user[your@email.goes.here]'"
 STARTUP
+
 chmod +x ~ubuntu/startup.sh
 echo 'Success :) Run ./startup.sh to start the web server.'
 rm make_dev make_prod README
