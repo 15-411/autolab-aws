@@ -74,7 +74,7 @@ sudo usermod -aG rvm ubuntu
 source /etc/profile.d/rvm.sh
 sudo /usr/share/rvm/bin/rvm install ruby-2.2.2
 sudo chown ubuntu:ubuntu -R ~/.rvm
-cat << EOF > ~/.bash_profile
+cat << "EOF" > ~/.bash_profile
 source ~/.bashrc
 export PATH=~rvm/gems/ruby-2.2.2/wrappers:$PATH
 EOF
@@ -132,6 +132,11 @@ EOF
 
 # Don't know where this directory comes from. :(
 rmdir 1 || true
+
+# Explain what to heck to do when you first SSH in to a new image.
+cat << EOF > ~ubuntu/README
+This is an instance that can become either a dev or a prod instance of Notolab. To choose, run one of "make_dev" or "make_prod". This will initialize stuff. Then, to start the webserver running, just run the startup script that is created by make_dev/make_prod.
+EOF
 
 # Script for setting up dev-specific things.
 cat << EOF > ~ubuntu/make_dev
@@ -204,7 +209,7 @@ screen -S autolab -dm bash -c 'cd ~/Autolab ; sudo env PATH="\$PATH" bundle exec
 STARTUP
 chmod +x ~ubuntu/startup.sh
 echo 'Success :) Run ./startup.sh to start the web server.'
-rm make_dev make_prod
+rm make_dev make_prod README
 EOF
 
 # Script for setting up prod-specific things.
@@ -236,7 +241,7 @@ screen -S autolab -dm bash -c 'cd ~/Autolab ; sudo env PATH="\$PATH" bundle exec
 STARTUP
 chmod +x ~ubuntu/startup.sh
 echo 'Success :) Run ./startup.sh to start the web server.'
-rm make_dev make_prod
+rm make_dev make_prod README
 EOF
 
 chmod +x ~ubuntu/make_dev
