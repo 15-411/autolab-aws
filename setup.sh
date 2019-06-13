@@ -2,6 +2,7 @@
 
 tango_repo=CMU-15-411-F18/Tango
 autolab_repo=CMU-15-411-F18/Autolab
+email_for_errors=nroberts@alumni.cmu.edu
 
 logit () {
   echo "***SUMMARY*** $1"
@@ -105,7 +106,17 @@ replace_config () {
   key=$1
   value=$2
   value=$(sed "s/\//\\\\\//g" <<< "$value")
-  sed "s/#$key =/ $key =/g ; s/\\<$key = .*/$key = $value/g"
+  sed -e "s/^\([[:space:]]*\)$key: .*/\1$key: $value/g ; s/^\([[:space:]]*\)$key = .*/\1$key = $value/g"
+}
+
+uncomment_out () {
+  line=$1
+  sed -e "s/^\([[:space:]]*\)#[[:space:]]*$key\>/\1$key/g"
+}
+
+comment_out () {
+  line=$1
+  sed -e "s/^\([[:space:]]*\)$key\>/\1# $key/g"
 }
 EOF
 )
@@ -163,6 +174,7 @@ echo "other running instances."
 # Initialize mailer
 < ~/Autolab/config/environments/production.template.rb \\
   replace_config config.action_mailer.delivery_method :smtp |
+  uncomment_out config.action_mailer.smtp_settings |
   replace_config config.action_mailer.smtp_settings "{ address: 'email-smtp.us-east-1.amazonaws.com', port: 587, enable_starttls_auto: true, authentication: 'login', user_name: '$MAILER_USERNAME', password: '$MAILER_PASSWORD', domain: 'notolab.ml' }" > ~/Autolab/config/environments/production.rb
 
 # Initialize config
@@ -187,9 +199,13 @@ echo "other running instances."
   replace_config SECURITY_KEY_NAME "'$(basename "$SSH_KEY")'" |
   replace_config TANGO_RESERVATION_ID "'1'" > ~/Tango/config.py
 
-# DB and school settings require no changes
+# Set up school
+< ~/Autolab/config/school.yml.template \\
+  replace_config school_name '"Carnegie Mellon University"' |
+  replace_config school_short_name '"CMU"' > ~/Autolab/config/school.yml
+
+# DB settings require no changes
 cp ~/Autolab/config/database.yml.template ~/Autolab/config/database.yml
-cp ~/Autolab/config/school.yml.template ~/Autolab/config/school.yml
 
 ( cd ~/Autolab
   RAILS_ENV=development bundle exec rake db:setup
@@ -219,13 +235,76 @@ cat << EOF > ~ubuntu/make_prod
 
 $replace_config
 
-sudo add-apt-repository ppa:certbot/certbot
+sudo add-apt-repository -y ppa:certbot/certbot
 sudo apt-get update
 sudo apt-get install -y \\
+  my-sql-client \\
+  my-sql-server \\
   nginx \\
   python-certbot-nginx \\
   ;
-sudo certbot --nginx
+
+# Generate random api key: prod########
+api_key=prod\$(tr -dc 'a-f0-9' < /dev/urandom | head -c8)
+
+# Generate random my sql password.
+mysql_password=\$(tr -dc 'a-f0-9' < /dev/urandom | head -c16)
+
+# Initialize autograde config template
+< ~/Autolab/config/autogradeConfig.rb.template \\
+  replace_config RESTFUL_HOST "'localhost'" |
+  replace_config RESTFUL_PORT 3000 |
+  replace_config RESTFUL_KEY "'\$api_key'" > ~/Autolab/config/autogradeConfig.rb
+
+# Initialize devise for mailer.
+< ~/Autolab/config/initializers/devise.rb.template \\
+  replace_config config.secret_key "''" |
+  replace_config config.mailer_sender "'creds@notolab.ml'" > ~/Autolab/config/initializers/devise.rb
+
+# Initialize mailer
+< ~/Autolab/config/environments/production.template.rb \\
+  replace_config config.action_mailer.serve_static_files true |
+  replace_config config.action_mailer.delivery_method :smtp |
+  comment_out 'config.middleware.use Rack::SslEnforcer' |
+  uncomment_out config.action_mailer.default_url_options |
+  replace_config config.action_mailer.default_url_options "{protocol: 'https', host: 'notolab.ml'}" |
+  uncomment_out config.action_mailer.smtp_settings |
+  replace_config config.action_mailer.smtp_settings "{ address: 'email-smtp.us-east-1.amazonaws.com', port: 587, enable_starttls_auto: true, authentication: 'login', user_name: '$MAILER_USERNAME', password: '$MAILER_PASSWORD', domain: 'notolab.ml' }" |
+  replace_config sender_address "\\\"NOTIFIER\\\" <notifications@notolab.ml>" |
+  replace_config exception_recipients: "'$email_for_errors'" > ~/Autolab/config/environments/production.rb
+
+# Set up database
+< ~/Autolab/config/database.yml.template \\
+  sed "s/\\<test:/production:/g" |
+  sed "s/\\<development:/deprecated:/g" |
+  replace_config database autolab_prod |
+  replace_config username autolab |
+  replace_config password "'\$mysql_password'" > ~/Autolab/config/database.yml
+
+# Set up school
+< ~/Autolab/config/school.yml.template \\
+  replace_config school_name '"Carnegie Mellon University"' |
+  replace_config school_short_name '"CMU"' > ~/Autolab/config/school.yml
+
+# Initialize mysql database.
+# First, emulate mysql_secure_install with no user interaction.
+# See https://stackoverflow.com/questions/24270733/automate-mysql-secure-installation-with-echo-command-via-a-shell-script
+sudo mysql -sfu root <<DB
+DELETE FROM mysql.user WHERE User='';
+DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
+DROP DATABASE IF EXISTS test;
+DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
+FLUSH PRIVILEGES;
+DB
+
+# Next, create a user autolab.
+sudo mysql -sfu root <<DB
+CREATE USER 'autolab'@'localhost' IDENTIFIED BY '\$mysql_password';
+GRANT ALL PRIVILEGES ON *.* TO 'autolab'@'localhost' WITH GRANT OPTION;
+DB
+
+# TODO: decide how to present certbot stuff.
+# sudo certbot --nginx
 
 cat << "STARTUP" > ~ubuntu/startup.sh
 #!/bin/bash -e
