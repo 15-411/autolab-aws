@@ -35,6 +35,8 @@ elif [ -z "$SSH_KEY" ]; then
   echo "./setup.sh: Missing: Environment variable for SSH_KEY location."
   exit 1
 fi
+ssh_key_basename=$(basename -- "$SSH_KEY")
+ssh_key_basename_no_extension=${ssh_key_basename%.*}
 chmod 400 "$SSH_KEY" # Set permissions correctly.
 
 # 1. Upgrade apt-get and install packages.
@@ -196,7 +198,7 @@ echo "other running instances."
   replace_config DEFAULT_INST_TYPE "'r5.large'" |
   replace_config DEFAULT_SECURITY_GROUP "'15-411 Worker'" |
   replace_config SECURITY_KEY_PATH "'$SSH_KEY'" |
-  replace_config SECURITY_KEY_NAME "'$(basename "$SSH_KEY")'" |
+  replace_config SECURITY_KEY_NAME "'$ssh_key_basename_no_extension'" |
   replace_config TANGO_RESERVATION_ID "'1'" > ~/Tango/config.py
 
 # Set up school
@@ -304,6 +306,29 @@ mysql_password=\$(tr -dc 'a-f0-9' < /dev/urandom | head -c16)
 < ~/Autolab/config/school.yml.template \\
   replace_config school_name '"Carnegie Mellon University"' |
   replace_config school_short_name '"CMU"' > ~/Autolab/config/school.yml
+
+# Initialize config
+< ~/Tango/config.template.py \\
+  replace_config PREFIX '"prod"' |
+  replace_config VMMS_NAME '"ec2SSH"' |
+  replace_config KEYS '["\$api_key"]' |
+  replace_config CANCEL_TIMEOUT 30 |
+  replace_config AUTODRIVER_LOGGING_TIME_ZONE "'America/New_York'" |
+  replace_config AUTODRIVER_STREAM True |
+  replace_config KEEP_VM_AFTER_FAILURE False |
+  replace_config MAX_POOL_SIZE 20 |
+  replace_config POOL_SIZE_LOW_WATER_MARK 2 |
+  replace_config POOL_ALLOC_INCREMENT 1 |
+  replace_config MAX_CONCURRENT_JOBS 1 |
+  replace_config EC2_REGION "'us-east-1'" |
+  replace_config EC2_REGION_LONG "'US East (N. Virginia)'" |
+  replace_config EC2_USER_NAME "'ubuntu'" |
+  replace_config DEFAULT_AMI "'ami-0afd8be702c9b181b'" |
+  replace_config DEFAULT_INST_TYPE "'r5.large'" |
+  replace_config DEFAULT_SECURITY_GROUP "'15-411 Worker'" |
+  replace_config SECURITY_KEY_PATH "'$SSH_KEY'" |
+  replace_config SECURITY_KEY_NAME "'$ssh_key_basename_no_extension'" |
+  replace_config TANGO_RESERVATION_ID "'1'" > ~/Tango/config.py
 
 # Initialize mysql database.
 # First, emulate mysql_secure_install with no user interaction.
