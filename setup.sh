@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
-tango_repo=CMU-15-411-F18/Tango
-autolab_repo=CMU-15-411-F18/Autolab
+tango_repo=15-411/Tango
+autolab_repo=15-411/Autolab
 email_for_errors=nroberts@alumni.cmu.edu
 
 logit () {
