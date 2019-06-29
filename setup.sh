@@ -2,7 +2,10 @@
 
 tango_repo=15-411/Tango
 autolab_repo=15-411/Autolab
+aws_region=us-east-1
 email_for_errors=nroberts@alumni.cmu.edu
+s3_mysql_bucket=autolab-prod-mysql-backup
+s3_course_bucket=autolab-prod-course-backup
 
 logit () {
   echo "***SUMMARY*** $1"
@@ -259,6 +262,7 @@ $replace_config
 sudo add-apt-repository -y ppa:certbot/certbot
 sudo apt-get update
 sudo apt-get install -y \\
+  awscli \\
   mysql-client \\
   mysql-server \\
   nginx \\
@@ -353,6 +357,28 @@ DB
   RAILS_ENV=production bundle exec rake assets:precompile
 )
 
+# Run mysql and course backups daily
+sudo cat << "BACKUP" > /etc/cron.daily/autolab-prod-backups
+#!/bin/bash
+cd /tmp || exit 0
+file=\$(date +%a).sql
+mysqldump autolab_prod > \$file
+if [ "\$?" -eq 0 ]; then
+  gzip \$file
+  AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY AWS_SECRET_ACCESS_KEY=$AWS_SECRET_KEY AWS_DEFAULT_REGION=$aws_region aws s3 cp \$file.gz s3://$s3_mysql_bucket
+  rm \$file.gz
+else
+  echo "Error backing up mysql"
+  exit 255
+fi
+
+course_file=courses-\$(date +%a)
+if [ tar cvf \$course_file.tar.gz ~ubuntu/Autolab/courses ]; then
+  AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY AWS_SECRET_ACCESS_KEY=$AWS_SECRET_KEY AWS_DEFAULT_REGION=$aws_region aws s3 cp \$course_file.tar.gz s3://$s3_course_bucket
+  rm \$course_file.tar.gz
+fi
+BACKUP
+
 # Create site config
 sudo cat << "CONFIG" > /etc/nginx/sites-available/autolab
 server {
@@ -405,6 +431,7 @@ echo "  bundle exec rake 'admin:promote_user[your@email.goes.here]'"
 STARTUP
 
 chmod +x ~ubuntu/startup.sh
+chmod +x ~ubuntu/promote_user.sh
 echo 'Success :) Run ./startup.sh to start the web server.'
 rm make_dev make_prod README
 EOF
