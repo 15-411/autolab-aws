@@ -240,7 +240,7 @@ read -p "Email? (no single quotes) " email
 read -p "First name? (no single quotes) " fn
 read -p "Last name? (no single quotes) " ln
 sqlite3 Autolab/db/db.sqlite3 << SQLITE
-INSERT INTO users (email, first_name, last_name, confirmed_at, administrator) VALUES ('$email', '$fn', '$ln', 1, 1);
+INSERT INTO users (email, first_name, last_name, confirmed_at, administrator) VALUES ('\$email', '\$fn', '\$ln', 1, 1);
 SQLITE
 echo "User successfully created. You can now use Developer Login with that user at dev.notolab.ml"
 CREATE_DEV_ACCOUNT
@@ -284,7 +284,7 @@ mysql_password=\$(tr -dc 'a-f0-9' < /dev/urandom | head -c16)
 
 # Initialize mailer
 < ~/Autolab/config/environments/production.template.rb \\
-  replace_config config.action_mailer.serve_static_files true |
+  replace_config config.serve_static_files true |
   replace_config config.action_mailer.delivery_method :smtp |
   comment_out 'config.middleware.use Rack::SslEnforcer' |
   uncomment_out config.action_mailer.default_url_options |
@@ -353,14 +353,36 @@ DB
   RAILS_ENV=production bundle exec rake assets:precompile
 )
 
-# TODO: This site config stuff
-# add site config to /etc/nginx/sites_available/autolab (redirect to http://127.0.0.1:15411 using proxy_pass)
+# Create site config
+sudo cat << "CONFIG" > /etc/nginx/sites-available/autolab
+server {
+        server_name notolab.ml www.notolab.ml prod.notolab.ml www.prod.notolab.ml;
+        location / {
+                proxy_pass http://127.0.0.1:15411;
+                proxy_set_header Host \$host;
+                proxy_set_header X-Real-IP \$remote_addr;
+                proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto \$scheme;
+        }
+}
+CONFIG
 # enable site config by creating a symlink and restarting nginx:
-# sudo ln -s /etc/nginx/sites-available/autolab autolab
-# sudo service nginx restart
+sudo ln -s /etc/nginx/sites-available/autolab /etc/nginx/sites-enabled/autolab
+sudo service nginx restart
 
-# TODO: decide how to present certbot stuff.
-# sudo certbot --nginx
+# They have to just enter the certbot information themselves.
+sudo certbot --nginx
+
+cat << "PROMOTE" > ~ubuntu/promote_user.sh
+#!/bin/bash
+# Run this program to promote the given user to an administrator of Autolab.
+[ "\$#" -eq 1 ] || {
+  echo "Run with one argument: the email to promote to admin."
+  exit 1
+}
+cd Autolab
+sudo env PATH="\$PATH" RAILS_ENV=production bundle exec rake "admin:promote_user[\$1]"
+PROMOTE
 
 cat << "STARTUP" > ~ubuntu/startup.sh
 #!/bin/bash -e
