@@ -379,7 +379,7 @@ else
 fi
 
 course_file=courses-\$(date +%a)
-if [ tar cvf \$course_file.tar.gz ~ubuntu/Autolab/courses ]; then
+if tar cvf \$course_file.tar.gz ~ubuntu/Autolab/courses; then
   AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY AWS_SECRET_ACCESS_KEY=$AWS_SECRET_KEY AWS_DEFAULT_REGION=$aws_region aws s3 cp \$course_file.tar.gz s3://$s3_course_bucket
   rm \$course_file.tar.gz
 fi
@@ -432,7 +432,7 @@ echo "Everything is running, and once you have pointed the elastic IP for notola
 echo "this instance, you should be able to access prod-notolab at this URL:"
 echo "  https://notolab.ml"
 echo "Once you have created and verified a user, you can promote yourself to admin"
-echo "by running this command:
+echo "by running this command:"
 echo "  ./promote_user your@email.goes.here"
 STARTUP
 
