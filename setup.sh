@@ -315,7 +315,7 @@ mysql_password=\$(tr -dc 'a-f0-9' < /dev/urandom | head -c16)
 < ~/Tango/config.template.py \\
   replace_config PREFIX '"prod"' |
   replace_config VMMS_NAME '"ec2SSH"' |
-  replace_config KEYS '["\$api_key"]' |
+  replace_config KEYS "['\$api_key']" |
   replace_config CANCEL_TIMEOUT 30 |
   replace_config AUTODRIVER_LOGGING_TIME_ZONE "'America/New_York'" |
   replace_config AUTODRIVER_STREAM True |
@@ -358,7 +358,7 @@ DB
 )
 
 # Run mysql and course backups daily
-sudo cat << "BACKUP" > /etc/cron.daily/autolab-prod-backups
+cat << "BACKUP" | sudo tee /etc/cron.daily/autolab-prod-backups
 #!/bin/bash
 cd /tmp || exit 0
 file=\$(date +%a).sql
@@ -380,7 +380,7 @@ fi
 BACKUP
 
 # Create site config
-sudo cat << "CONFIG" > /etc/nginx/sites-available/autolab
+cat << "CONFIG" | sudo tee /etc/nginx/sites-available/autolab
 server {
         server_name notolab.ml www.notolab.ml prod.notolab.ml www.prod.notolab.ml;
         location / {
@@ -426,8 +426,8 @@ echo "Everything is running, and once you have pointed the elastic IP for notola
 echo "this instance, you should be able to access prod-notolab at this URL:"
 echo "  https://notolab.ml"
 echo "Once you have created and verified a user, you can promote yourself to admin"
-echo "by running this command from the Autolab directory:"
-echo "  bundle exec rake 'admin:promote_user[your@email.goes.here]'"
+echo "by running this command:
+echo "  ./promote_user your@email.goes.here"
 STARTUP
 
 chmod +x ~ubuntu/startup.sh
