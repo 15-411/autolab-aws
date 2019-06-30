@@ -6,7 +6,9 @@
     "mailer_username": "{{env `MAILER_USERNAME`}}",
     "mailer_password": "{{env `MAILER_PASSWORD`}}",
     "ssh_key_source": "411-f19.pem",
-    "ssh_key_destination": "/home/ubuntu/411-f19.pem"
+    "ssh_key_destination": "/home/ubuntu/411-f19.pem",
+    "passwords_source": "passwords.csv",
+    "passwords_destination": "/home/ubuntu/passwords.csv"
   },
   "builders": [{
     "type": "amazon-ebs",
@@ -35,6 +37,11 @@
       "type": "file",
       "source": "{{user `ssh_key_source`}}",
       "destination": "{{user `ssh_key_destination`}}"
+    },
+    {
+      "type": "file",
+      "source": "{{user `passwords_source`}}",
+      "destination": "{{user `passwords_destination`}}"
     },
     {
       "type": "shell",

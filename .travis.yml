@@ -2,6 +2,8 @@ script:
 - packer build packer-autolab.json
 before_install:
 - openssl aes-256-cbc -K $encrypted_d4b3b1509bfe_key -iv $encrypted_d4b3b1509bfe_iv
+  -in passwords.csv.enc -out passwords.csv -d
+- openssl aes-256-cbc -K $encrypted_d4b3b1509bfe_key -iv $encrypted_d4b3b1509bfe_iv
   -in 411-f19.pem.enc -out 411-f19.pem -d
 env:
   global:
