@@ -38,6 +38,12 @@ elif [ -z "$SSH_KEY" ]; then
   echo "./setup.sh: Missing: Environment variable for SSH_KEY location."
   exit 1
 fi
+
+#0.1 Untarring archive
+logit 'Untarring archive...'
+tar xvf secret_files.tar.gz
+rm secret_files.tar.gz
+
 ssh_key_basename=$(basename -- "$SSH_KEY")
 ssh_key_basename_no_extension=${ssh_key_basename%.*}
 chmod 400 "$SSH_KEY" # Set permissions correctly.

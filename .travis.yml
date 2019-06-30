@@ -1,10 +1,5 @@
 script:
 - packer build packer-autolab.json
-before_install:
-- openssl aes-256-cbc -K $encrypted_d4b3b1509bfe_key -iv $encrypted_d4b3b1509bfe_iv
-  -in passwords.csv.enc -out passwords.csv -d
-- openssl aes-256-cbc -K $encrypted_d4b3b1509bfe_key -iv $encrypted_d4b3b1509bfe_iv
-  -in 411-f19.pem.enc -out 411-f19.pem -d
 env:
   global:
   - secure: YaGGj/MFOgb+VTjNDKDVQcZb2a/s5KauY/OYVk/8WYs8Ck86Yx2LFaXSh619aqBCN35JC8tEHeFQzBQGaI8AXlHOVk2CZHOCybrznxEsYn/UzFeEb1Y0kgwsEQtfz1TOl/B7Vnkct9yAEhQd8yHshwUeY8HJnvQzHOglns+VK+tWt7zb8CxeZXepKMxNqvDgAB4GSN0Dc3bZOoSWpC3zeFKpOaCK6yv/jTnsDef/Awe84bfVBa9N5p9RIkXk9d0t2rCuQTzwigWogssg+DOOFEAVO63ZYM+5UxBN10GngEus8nLd986zM/nDuZ4zgsjbIQLk4Kt2lGH6Nt+s0UoeHoK2RKwgBBCn1BtPenL8wcQLEkJ0V9NDqDv080lb4Gwx4fyv/QsuRzABZVWtr82bdLXe6vwXXvFhdUOX1a7/vYWer0kTdxZxZoTvzfKdK3S4dd2+nxSEWw2OdyHlqxhIT2r+wosRRrRMo/2gEcaqfi5/rv/NSR5KMNWXhbmGfSBl7z2KpvpF61M6yhIrUKyFmyyT65Dp2blWwv0I+UImLKLcjt31nlXNm+94fLAK3hrI7ucNaRIXIZQc2UA/pNS1WNhMrQV0TsqyKh0ZRGzGfrx1Fs5VUGH5SHz3iqhtP4QIvr+/QkM1SyZysbfPkKENBl4EXo7V2Ca4lvEJsJTORbA=
@@ -14,3 +9,6 @@ env:
 notifications:
   slack:
     secure: XKov6Ro5SCJ8xBx2+7yhEIcPhhg3Cki33Ae5dfC/xOCTH+yMFRFqwok7WQFXPDFKViXSr6EJ/w7iqMQhyPxuLexEWGRYQ9UCGrhqBEINUlklGuIYxZzkoq8xxIGjuxB0XuqO9zG0F2fQ9LTOkiN4P68tTuErXl7myHr14w5aAByEiV5UnJ81iahdodkQSYcNVyu2QUkO7mRrr3Dzaw5ycRmm+30RT+i0fveIlobyaW7CyNcraD8mcks22et5IiKL/xSAxkAIBkWY9ZgEJIJdUmHz8hFacPRaIK9sxNsJu9/h7zUmsQe7lZlTMUnf682vqnZ5oEcGaNWZlytYO2VzgDDY8WgRBzNM8esfte9wmZ2kpCJ3XRyqLBrmMDBBnhHcOmRPM8lCqFxh47pVH+BdV58oDL4GVKOl8s9TmeI2Xhm57QkKJhwhwYJZ9CViwUAEtUm2851paFeclvV9CK3qe/xTOvauTNbwGo6bi0wiIsW77Jcxf5vnwokZCwi68wKwpiJ224rPHIvSfiNLzUsl+w3VVvWHmE3TMhA99W15SlGf59zfYtmzMm4wR6+Q8AasrqCB5qJtFKYbTdxtimB/rjeJhBH6ABEAvFnRvgWfsfIjZfSQR/kCQ7drOlM1Wu59KMANSbRxFIfqA8ije8xg7/djapj9+Q703wBpcmkTm48=
+before_install:
+- openssl aes-256-cbc -K $encrypted_d4b3b1509bfe_key -iv $encrypted_d4b3b1509bfe_iv
+  -in secret_files.tar.gz.enc -out secret_files.tar.gz -d
