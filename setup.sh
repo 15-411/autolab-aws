@@ -377,6 +377,7 @@ else
   echo "Error backing up mysql"
   exit 255
 fi
+sudo chmod +x /etc/cron.daily/autolab-prod-backups
 
 course_file=courses-\$(date +%a)
 if tar cvf \$course_file.tar.gz ~ubuntu/Autolab/courses; then
