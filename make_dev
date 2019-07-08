@@ -1,0 +1,73 @@
+#!/bin/bash -e
+
+# Everything should be run from ubuntu's home directory.
+cd ~ubuntu
+
+. scripts/credentials.sh # Source environment variables used in setup script.
+. scripts/config_utils.sh # Source useful helper functions.
+
+echo "Remember to add the SSH public keys of TAs to ~ubuntu/.ssh/authorized_keys"
+echo "so that they can access the AWS private key $SSH_KEY for sshing into the"
+echo "other running instances."
+
+# Initialize autograde config template
+< Autolab/config/autogradeConfig.rb.template \
+  replace_config RESTFUL_HOST "'localhost'" |
+  replace_config RESTFUL_PORT 3000 |
+  replace_config RESTFUL_KEY "'test'" \
+  > Autolab/config/autogradeConfig.rb
+
+# Initialize devise for mailer.
+< Autolab/config/initializers/devise.rb.template \
+  replace_config config.secret_key "''" |
+  replace_config config.mailer_sender "'creds@notolab.ml'" \
+  > Autolab/config/initializers/devise.rb
+
+# Initialize mailer
+< Autolab/config/environments/production.template.rb \
+  replace_config config.action_mailer.delivery_method :smtp |
+  uncomment_out config.action_mailer.smtp_settings |
+  replace_config config.action_mailer.smtp_settings "{ address: 'email-smtp.us-east-1.amazonaws.com', port: 587, enable_starttls_auto: true, authentication: 'login', user_name: '$MAILER_USERNAME', password: '$MAILER_PASSWORD', domain: 'notolab.ml' }" \
+  > Autolab/config/environments/production.rb
+
+# Initialize config
+< Tango/config.template.py \
+  replace_config VMMS_NAME '"ec2SSH"' |
+  replace_config CANCEL_TIMEOUT 30 |
+  replace_config AUTODRIVER_LOGGING_TIME_ZONE "'America/New_York'" |
+  replace_config AUTODRIVER_STREAM True |
+  replace_config MAX_OUTPUT_FILE_SIZE '1000 * 1024' |
+  replace_config KEEP_VM_AFTER_FAILURE True |
+  replace_config MAX_POOL_SIZE 2 |
+  replace_config POOL_SIZE_LOW_WATER_MARK 1 |
+  replace_config POOL_ALLOC_INCREMENT 1 |
+  replace_config MAX_CONCURRENT_JOBS 1 |
+  replace_config EC2_REGION "'us-east-1'" |
+  replace_config EC2_REGION_LONG "'US East (N. Virginia)'" |
+  replace_config EC2_USER_NAME "'ubuntu'" |
+  replace_config DEFAULT_AMI "'ami-0afd8be702c9b181b'" |
+  replace_config DEFAULT_INST_TYPE "'r5.large'" |
+  replace_config DEFAULT_SECURITY_GROUP "'15-411 Worker'" |
+  replace_config SECURITY_KEY_PATH "'$SSH_KEY'" |
+  replace_config SECURITY_KEY_NAME "'$ssh_key_basename_no_extension'" |
+  replace_config TANGO_RESERVATION_ID "'1'" \
+  > Tango/config.py
+
+# Set up school
+< Autolab/config/school.yml.template \
+  replace_config school_name '"Carnegie Mellon University"' |
+  replace_config school_short_name '"CMU"' \
+  > Autolab/config/school.yml
+
+# DB settings require no changes
+cp Autolab/config/database.yml.template Autolab/config/database.yml
+
+( cd Autolab || exit 1
+  RAILS_ENV=development bundle exec rake db:setup
+)
+
+ln -s scripts/startup_dev.sh startup.sh
+ln -s scripts/create_dev_account.sh create_dev_account.sh
+
+rm make_dev make_prod README
+echo 'Success :) Run ./startup.sh to start the web server.'

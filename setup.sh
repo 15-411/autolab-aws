@@ -2,10 +2,6 @@
 
 tango_repo=15-411/Tango
 autolab_repo=15-411/Autolab
-aws_region=us-east-1
-email_for_errors=nroberts@alumni.cmu.edu
-s3_mysql_bucket=autolab-prod-mysql-backup
-s3_course_bucket=autolab-prod-course-backup
 
 logit () {
   echo "***SUMMARY*** $1"
@@ -17,7 +13,7 @@ logit 'Starting script...'
 sleep_time=120
 if [ ! -z "$sleep_time" ]; then
   logit "Sleeping for $sleep_time seconds to allow for sufficient setup for Ubuntu..."
-  sleep $sleep_time
+  sleep "$sleep_time"
 fi
 
 # 0. Environment validation
@@ -105,53 +101,12 @@ logit 'Installing ruby dependencies...'
 ( cd ~/Autolab ; sudo env PATH="$PATH" bundle install )
 
 # 3. Add AWS credentials to ~ubuntu/.boto
+logit 'Writing AWS credentials...'
 cat << EOF > ~ubuntu/.boto
 [Credentials]
 aws_access_key_id = $AWS_ACCESS_KEY
 aws_secret_access_key = $AWS_SECRET_KEY
 EOF
-
-# Initialize useful script for use in both make_dev and make_prod.
-replace_config=$(cat << 'EOF'
-replace_config () {
-  key=$1
-  value=$2
-  value=$(sed "s/\//\\\\\//g" <<< "$value")
-  sed -e "s/^\([[:space:]]*\)$key: .*/\1$key: $value/g ; s/^\([[:space:]]*\)$key = .*/\1$key = $value/g"
-}
-
-uncomment_out () {
-  line=$1
-  sed -e "s/^\([[:space:]]*\)#[[:space:]]*$line\>/\1$line/g"
-}
-
-comment_out () {
-  line=$1
-  sed -e "s/^\([[:space:]]*\)$line\>/\1# $line/g"
-}
-EOF
-)
-
-# Script for counting the number of screens.
-screen_count=$(cat << "EOF"
-screen_count=$(screen -ls | grep $'^\t' | wc -l)
-if [ "$screen_count" != 0 ]; then
-  echo "ERROR: startup script already run, so the screens are already started."
-  echo "To see the running screens, run:"
-  echo "  screen -ls"
-  echo "You can enter the screens with:"
-  echo "  screen -r autolab"
-  echo "  screen -r tango"
-  echo "  screen -r redis"
-  echo "Once you are in the screen, you can detach (which does not kill the screen)"
-  echo "  by running ^A + d (which is Cmd-A followed by d on Mac)."
-  echo "To kill the screen you are attached to, first interrupt the running"
-  echo "  program with ^C, and then run ^A + :kill (which is Cmd-A  followed"
-  echo "  by typing ':kill and then pressing enter.)"
-  exit 1
-fi
-EOF
-)
 
 # Don't know where this directory comes from. :(
 rmdir 1 || true
@@ -161,287 +116,17 @@ cat << EOF > ~ubuntu/README
 This is an instance that can become either a dev or a prod instance of Notolab. To choose, run one of "make_dev" or "make_prod". This will initialize stuff. Then, to start the webserver running, just run the startup script that is created by make_dev/make_prod.
 EOF
 
-# Script for setting up dev-specific things.
-cat << EOF > ~ubuntu/make_dev
-#!/bin/bash -e
-
-$replace_config
-
-echo "Remember to add the SSH public keys of TAs to ~ubuntu/.ssh/authorized_keys"
-echo "so that they can access the AWS private key $SSH_KEY for sshing into the"
-echo "other running instances."
-
-# Initialize autograde config template
-< ~/Autolab/config/autogradeConfig.rb.template \\
-  replace_config RESTFUL_HOST "'localhost'" |
-  replace_config RESTFUL_PORT 3000 |
-  replace_config RESTFUL_KEY "'test'" > ~/Autolab/config/autogradeConfig.rb
-
-# Initialize devise for mailer.
-< ~/Autolab/config/initializers/devise.rb.template \\
-  replace_config config.secret_key "''" |
-  replace_config config.mailer_sender "'creds@notolab.ml'" > ~/Autolab/config/initializers/devise.rb
-
-# Initialize mailer
-< ~/Autolab/config/environments/production.template.rb \\
-  replace_config config.action_mailer.delivery_method :smtp |
-  uncomment_out config.action_mailer.smtp_settings |
-  replace_config config.action_mailer.smtp_settings "{ address: 'email-smtp.us-east-1.amazonaws.com', port: 587, enable_starttls_auto: true, authentication: 'login', user_name: '$MAILER_USERNAME', password: '$MAILER_PASSWORD', domain: 'notolab.ml' }" > ~/Autolab/config/environments/production.rb
-
-# Initialize config
-< ~/Tango/config.template.py \\
-  replace_config VMMS_NAME '"ec2SSH"' |
-  replace_config CANCEL_TIMEOUT 30 |
-  replace_config AUTODRIVER_LOGGING_TIME_ZONE "'America/New_York'" |
-  replace_config AUTODRIVER_STREAM True |
-  replace_config MAX_OUTPUT_FILE_SIZE '1000 * 1024' |
-  replace_config KEEP_VM_AFTER_FAILURE True |
-  replace_config MAX_POOL_SIZE 2 |
-  replace_config POOL_SIZE_LOW_WATER_MARK 1 |
-  replace_config POOL_ALLOC_INCREMENT 1 |
-  replace_config MAX_CONCURRENT_JOBS 1 |
-  replace_config EC2_REGION "'us-east-1'" |
-  replace_config EC2_REGION_LONG "'US East (N. Virginia)'" |
-  replace_config EC2_USER_NAME "'ubuntu'" |
-  replace_config DEFAULT_AMI "'ami-0afd8be702c9b181b'" |
-  replace_config DEFAULT_INST_TYPE "'r5.large'" |
-  replace_config DEFAULT_SECURITY_GROUP "'15-411 Worker'" |
-  replace_config SECURITY_KEY_PATH "'$SSH_KEY'" |
-  replace_config SECURITY_KEY_NAME "'$ssh_key_basename_no_extension'" |
-  replace_config TANGO_RESERVATION_ID "'1'" > ~/Tango/config.py
-
-# Set up school
-< ~/Autolab/config/school.yml.template \\
-  replace_config school_name '"Carnegie Mellon University"' |
-  replace_config school_short_name '"CMU"' > ~/Autolab/config/school.yml
-
-# DB settings require no changes
-cp ~/Autolab/config/database.yml.template ~/Autolab/config/database.yml
-
-( cd ~/Autolab
-  RAILS_ENV=development bundle exec rake db:setup
-)
-
-cat << "STARTUP" > ~ubuntu/startup.sh
-#!/bin/bash -e
-# Run this script to get the webserver running.
-
-$screen_count
-
-echo "Initializing redis server..."
-screen -S redis -dm redis-server
-echo "Initializing Tango..."
-screen -S tango -dm bash -c 'cd ~/Tango ; concurrently -n jobManager,server "python jobManager.py" "python restful-tango/server.py"'
-echo "Initializing Autolab..."
-screen -S autolab -dm bash -c 'cd ~/Autolab ; sudo env PATH="\$PATH" bundle exec rails s -p 80 -b 0.0.0.0'
-echo "Everything is running, and once you have pointed the elastic IP for dev.notolab.ml at"
-echo "this instance, you should be able to access dev-notolab at this URL:"
-echo "  https://dev.notolab.ml"
-echo "You can run the (interactive) script ./create_dev_account to create an account you"
-echo "can log into from the 'Developer Login' page."
-STARTUP
-
-cat << "CREATE_DEV_ACCOUNT" > ~ubuntu/create_dev_account
-#!/bin/bash
-# Since mailer doesn't work on dev notolab, this script can be run (without arguments)
-# to create a developer user you can log in with at "Developer Login".
-read -p "Email? (no single quotes) " email
-read -p "First name? (no single quotes) " fn
-read -p "Last name? (no single quotes) " ln
-sqlite3 Autolab/db/db.sqlite3 << SQLITE
-INSERT INTO users (email, first_name, last_name, confirmed_at, administrator) VALUES ('\$email', '\$fn', '\$ln', 1, 1);
-SQLITE
-echo "User successfully created. You can now use Developer Login with that user at dev.notolab.ml"
-CREATE_DEV_ACCOUNT
-
-chmod +x ~ubuntu/startup.sh ~ubuntu/create_dev_account
-echo 'Success :) Run ./startup.sh to start the web server.'
-rm make_dev make_prod README
-EOF
-
-# Script for setting up prod-specific things.
-cat << EOF > ~ubuntu/make_prod
-#!/bin/bash -e
-
-$replace_config
-
-sudo add-apt-repository -y ppa:certbot/certbot
-sudo apt-get update
-sudo apt-get install -y \\
-  awscli \\
-  mysql-client \\
-  mysql-server \\
-  nginx \\
-  python-certbot-nginx \\
+# Create credentials to be imported into startup scripts.
+logit 'Storing credentials as environment variables...'
+cat << EOF > ~ubuntu/scripts/credentials.sh
+export \\
+  SSH_KEY=$SSH_KEY \\
+  ssh_key_basename_no_extension=$ssh_key_basename_no_extension \\
+  MAILER_USERNAME=$MAILER_USERNAME \\
+  MAILER_PASSWORD=$MAILER_PASSWORD \\
+  aws_region=us-east-1 \\
+  email_for_errors=nroberts@alumni.cmu.edu \\
+  s3_mysql_bucket=autolab-prod-mysql-backup \\
+  s3_course_bucket=autolab-prod-course-backup \\
   ;
-
-# Generate random api key: prod########
-api_key=prod\$(tr -dc 'a-f0-9' < /dev/urandom | head -c8)
-
-# Generate random my sql password.
-mysql_password=\$(tr -dc 'a-f0-9' < /dev/urandom | head -c16)
-
-# Initialize autograde config template
-< ~/Autolab/config/autogradeConfig.rb.template \\
-  replace_config RESTFUL_HOST "'localhost'" |
-  replace_config RESTFUL_PORT 3000 |
-  replace_config RESTFUL_KEY "'\$api_key'" > ~/Autolab/config/autogradeConfig.rb
-
-# Initialize devise for mailer.
-< ~/Autolab/config/initializers/devise.rb.template \\
-  replace_config config.secret_key "''" |
-  replace_config config.mailer_sender "'creds@notolab.ml'" > ~/Autolab/config/initializers/devise.rb
-
-# Initialize mailer
-< ~/Autolab/config/environments/production.template.rb \\
-  replace_config config.serve_static_files true |
-  replace_config config.action_mailer.delivery_method :smtp |
-  comment_out 'config.middleware.use Rack::SslEnforcer' |
-  uncomment_out config.action_mailer.default_url_options |
-  replace_config config.action_mailer.default_url_options "{protocol: 'https', host: 'notolab.ml'}" |
-  uncomment_out config.action_mailer.smtp_settings |
-  replace_config config.action_mailer.smtp_settings "{ address: 'email-smtp.us-east-1.amazonaws.com', port: 587, enable_starttls_auto: true, authentication: 'login', user_name: '$MAILER_USERNAME', password: '$MAILER_PASSWORD', domain: 'notolab.ml' }" |
-  replace_config sender_address "\\"\\\\\\\\\\"NOTIFIER\\\\\\\\\\" <notifications@notolab.ml>\\"," |
-  replace_config exception_recipients "'$email_for_errors'" > ~/Autolab/config/environments/production.rb
-
-# Set up database
-< ~/Autolab/config/database.yml.template \\
-  sed "s/\\<test:/production:/g" |
-  sed "s/\\<development:/deprecated:/g" |
-  replace_config database autolab_prod |
-  replace_config username autolab |
-  replace_config password "'\$mysql_password'" > ~/Autolab/config/database.yml
-
-# Set up school
-< ~/Autolab/config/school.yml.template \\
-  replace_config school_name '"Carnegie Mellon University"' |
-  replace_config school_short_name '"CMU"' > ~/Autolab/config/school.yml
-
-# Initialize config
-< ~/Tango/config.template.py \\
-  replace_config PREFIX '"prod"' |
-  replace_config VMMS_NAME '"ec2SSH"' |
-  replace_config KEYS "['\$api_key']" |
-  replace_config CANCEL_TIMEOUT 30 |
-  replace_config AUTODRIVER_LOGGING_TIME_ZONE "'America/New_York'" |
-  replace_config AUTODRIVER_STREAM True |
-  replace_config KEEP_VM_AFTER_FAILURE False |
-  replace_config MAX_POOL_SIZE 20 |
-  replace_config POOL_SIZE_LOW_WATER_MARK 2 |
-  replace_config POOL_ALLOC_INCREMENT 1 |
-  replace_config MAX_CONCURRENT_JOBS 1 |
-  replace_config EC2_REGION "'us-east-1'" |
-  replace_config EC2_REGION_LONG "'US East (N. Virginia)'" |
-  replace_config EC2_USER_NAME "'ubuntu'" |
-  replace_config DEFAULT_AMI "'ami-0afd8be702c9b181b'" |
-  replace_config DEFAULT_INST_TYPE "'r5.large'" |
-  replace_config DEFAULT_SECURITY_GROUP "'15-411 Worker'" |
-  replace_config SECURITY_KEY_PATH "'$SSH_KEY'" |
-  replace_config SECURITY_KEY_NAME "'$ssh_key_basename_no_extension'" |
-  replace_config TANGO_RESERVATION_ID "'1'" > ~/Tango/config.py
-
-# Initialize mysql database.
-# First, emulate mysql_secure_install with no user interaction.
-# See https://stackoverflow.com/questions/24270733/automate-mysql-secure-installation-with-echo-command-via-a-shell-script
-sudo mysql -sfu root <<DB
-DELETE FROM mysql.user WHERE User='';
-DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
-DROP DATABASE IF EXISTS test;
-DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
-FLUSH PRIVILEGES;
-DB
-
-# Next, create a user autolab.
-sudo mysql -sfu root <<DB
-CREATE USER 'autolab'@'localhost' IDENTIFIED BY '\$mysql_password';
-GRANT ALL PRIVILEGES ON *.* TO 'autolab'@'localhost' WITH GRANT OPTION;
-DB
-
-# Finally, set up the database.
-( cd Autolab
-  RAILS_ENV=production bundle exec rake db:reset
-  RAILS_ENV=production bundle exec rake assets:precompile
-)
-
-# Run mysql and course backups daily
-cat << "BACKUP" | sudo tee /etc/cron.daily/autolab-prod-backups
-#!/bin/bash
-cd /tmp || exit 0
-file=\$(date +%a).sql
-mysqldump autolab_prod > \$file
-if [ "\$?" -eq 0 ]; then
-  gzip \$file
-  AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY AWS_SECRET_ACCESS_KEY=$AWS_SECRET_KEY AWS_DEFAULT_REGION=$aws_region aws s3 cp \$file.gz s3://$s3_mysql_bucket
-  rm \$file.gz
-else
-  echo "Error backing up mysql"
-  exit 255
-fi
-sudo chmod +x /etc/cron.daily/autolab-prod-backups
-
-course_file=courses-\$(date +%a)
-if tar cvf \$course_file.tar.gz ~ubuntu/Autolab/courses; then
-  AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY AWS_SECRET_ACCESS_KEY=$AWS_SECRET_KEY AWS_DEFAULT_REGION=$aws_region aws s3 cp \$course_file.tar.gz s3://$s3_course_bucket
-  rm \$course_file.tar.gz
-fi
-BACKUP
-
-# Create site config
-cat << "CONFIG" | sudo tee /etc/nginx/sites-available/autolab
-server {
-        server_name notolab.ml www.notolab.ml prod.notolab.ml www.prod.notolab.ml;
-        location / {
-                proxy_pass http://127.0.0.1:15411;
-                proxy_set_header Host \$host;
-                proxy_set_header X-Real-IP \$remote_addr;
-                proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-                proxy_set_header X-Forwarded-Proto \$scheme;
-        }
-}
-CONFIG
-# enable site config by creating a symlink and restarting nginx:
-sudo ln -s /etc/nginx/sites-available/autolab /etc/nginx/sites-enabled/autolab
-sudo service nginx restart
-
-# They have to just enter the certbot information themselves.
-sudo certbot --nginx
-
-cat << "PROMOTE" > ~ubuntu/promote_user.sh
-#!/bin/bash
-# Run this program to promote the given user to an administrator of Autolab.
-[ "\$#" -eq 1 ] || {
-  echo "Run with one argument: the email to promote to admin."
-  exit 1
-}
-cd Autolab
-sudo env PATH="\$PATH" RAILS_ENV=production bundle exec rake "admin:promote_user[\$1]"
-PROMOTE
-
-cat << "STARTUP" > ~ubuntu/startup.sh
-#!/bin/bash -e
-# Run this script to get the webserver running.
-
-$screen_count
-
-echo "Initializing redis server..."
-screen -S redis -dm redis-server
-echo "Initializing Tango..."
-screen -S tango -dm bash -c 'cd ~/Tango ; concurrently -n jobManager,server "python jobManager.py" "python restful-tango/server.py"'
-echo "Initializing Autolab..."
-screen -S autolab -dm bash -c 'cd ~/Autolab ; sudo env PATH="\$PATH" bundle exec rails server -p 15411 -e production'
-echo "Everything is running, and once you have pointed the elastic IP for notolab.ml at"
-echo "this instance, you should be able to access prod-notolab at this URL:"
-echo "  https://notolab.ml"
-echo "Once you have created and verified a user, you can promote yourself to admin"
-echo "by running this command:"
-echo "  ./promote_user your@email.goes.here"
-STARTUP
-
-chmod +x ~ubuntu/startup.sh
-chmod +x ~ubuntu/promote_user.sh
-echo 'Success :) Run ./startup.sh to start the web server.'
-rm make_dev make_prod README
 EOF
-
-chmod +x ~ubuntu/make_dev
-chmod +x ~ubuntu/make_prod

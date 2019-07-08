@@ -7,7 +7,9 @@
     "mailer_password": "{{env `MAILER_PASSWORD`}}",
     "tar_source": "secret_files.tar.gz",
     "tar_destination": "/home/ubuntu/secret_files.tar.gz",
-    "ssh_key_destination": "/home/ubuntu/411-f19.pem"
+    "ssh_key_destination": "/home/ubuntu/411-f19.pem",
+    "scripts_source": "scripts",
+    "scripts_destination": "/home/ubuntu/scripts"
   },
   "builders": [{
     "type": "amazon-ebs",
@@ -36,6 +38,11 @@
       "type": "file",
       "source": "{{user `tar_source`}}",
       "destination": "{{user `tar_destination`}}"
+    },
+    {
+      "type": "file",
+      "source": "{{user `scripts_source`}}",
+      "destination": "{{user `scripts_destination`}}"
     },
     {
       "type": "shell",
