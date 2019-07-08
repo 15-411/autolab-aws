@@ -28,7 +28,7 @@ if already_running autolab; then
 else
   echo "Initializing Autolab..."
   #shellcheck disable=2016
-  screen -S autolab -dm bash -c 'cd ~/Autolab ; sudo env PATH="\$PATH" bundle exec rails server -p 15411 -e production'
+  screen -S autolab -dm bash -c 'cd ~/Autolab ; sudo env PATH="$PATH" bundle exec rails server -p 15411 -e production'
 fi
 
 echo "Everything is running, and once you have pointed the elastic IP for notolab.ml at"

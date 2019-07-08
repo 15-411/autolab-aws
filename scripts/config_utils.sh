@@ -25,7 +25,7 @@ uncomment_out () {
   # (Taking input from standard in, and putting on standard out)
   # (The prefix will only be uncommented if it forms a complete token on that line.)
 
-  prefix=${1:No prefix!}
+  prefix=${1:?No prefix!}
   sed -e "s/^\([[:space:]]*\)#[[:space:]]*$prefix\>/\1$prefix/g"
 }
 

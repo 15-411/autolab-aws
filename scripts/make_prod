@@ -54,7 +54,7 @@ mysql_password=$(tr -dc 'a-f0-9' < /dev/urandom | head -c16)
   sed "s/\\<development:/deprecated:/g" |
   replace_config database autolab_prod |
   replace_config username autolab |
-  replace_config password "'\$mysql_password'" \
+  replace_config password "'$mysql_password'" \
   > Autolab/config/database.yml
 
 # Set up school
@@ -67,7 +67,7 @@ mysql_password=$(tr -dc 'a-f0-9' < /dev/urandom | head -c16)
 < Tango/config.template.py \
   replace_config PREFIX '"prod"' |
   replace_config VMMS_NAME '"ec2SSH"' |
-  replace_config KEYS "['\$api_key']" |
+  replace_config KEYS "['$api_key']" |
   replace_config CANCEL_TIMEOUT 30 |
   replace_config AUTODRIVER_LOGGING_TIME_ZONE "'America/New_York'" |
   replace_config AUTODRIVER_STREAM True |
