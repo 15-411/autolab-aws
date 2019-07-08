@@ -130,3 +130,6 @@ export \\
   s3_course_bucket=autolab-prod-course-backup \\
   ;
 EOF
+
+ln -s scripts/make_dev make_dev
+ln -s scripts/make_prod make_prod
