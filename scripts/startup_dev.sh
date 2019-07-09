@@ -1,6 +1,8 @@
 #!/bin/bash -e
 # This script gets the dev webserver running.
 
+cd ~ubuntu
+
 # Ensure the right number of screens are present.
 scripts/screen_count.sh
 

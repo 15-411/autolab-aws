@@ -1,6 +1,8 @@
 #!/bin/bash -e
 # Run this script to get the webserver running.
 
+cd ~ubuntu
+
 # Print helpful error message if all three screens are already running.
 scripts/screen_count.sh
 
