@@ -10,9 +10,10 @@ The following bulleted list contains a more precise description of how exactly t
   5. Create an instance from the latest Autolab image. This involves: Choosing the latest Autolab image as the AMI, setting the storage to 20 GB (at least; the default 8 GB probably won't be enough), setting the security group to 15-411 Manager, and, upon launching the instance, choosing `411-f19.pem` as the security key in the menu that pops up.
   6. Wait for the instance to start up, looking at the Instances page of the EC2 dashboard. Once it has, ssh in as `ubuntu@XX.XXX.XX` (replacing the Xs with the appropriate IP address) and using the ssh key `411-f19.pem` (which you will have to obtain from someone on the course staff from last semester, probably by asking them to add your public SSH key to the old dev notolab server so you're able to SCP the key from there).
   7. Once you are sshed into the instance, run the `make_dev` or `make_prod` script from the ubuntu home directory. (These will perform setup based on whether you want the instance to be dev or prod notolab.)
-  8. Once the setup is complete, you should run the `startup.sh` script that was placed in the home directory to start the web server.
-  9. Navigate to the Elastic IP page of the EC2 dashboard. Point the elastic IP for dev or prod Notolab toward the new running instance.
-  10. Test that you can access the new instance at dev.notolab.ml or notolab.ml. You can terminate the old instance of dev or prod notolab, if there was one running in step 3.
+  8. If you're building prod Notolab, you might want to restore database and course backups. Navigate to the S3 dashboard within AWS. You should see two buckets: one for course backups, and the other for MySQL database backups. You can find the seven most recent daily backups in these buckets. Once you have untarred the backups, you can place the course backups directly as the `Autolab/courses` directory, and you can restore the MySQL backups with the command `sudo mysql -p autolab-prod < FILENAME.sql`.
+  9. Once the setup is complete, you should run the `startup.sh` script that was placed in the home directory to start the web server.
+  10. Navigate to the Elastic IP page of the EC2 dashboard. Point the elastic IP for dev or prod Notolab toward the new running instance.
+  11. Test that you can access the new instance at dev.notolab.ml or notolab.ml. You can terminate the old instance of dev or prod notolab, if there was one running in step 3.
 
 The secret information needed to be encoded in this repository is as follows:
   * `AWS_ACCESS_KEY`: the AWS access key for an AMI user that can build images.
