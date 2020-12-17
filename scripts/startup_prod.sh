@@ -33,9 +33,9 @@ else
   screen -S autolab -dm bash -c 'cd ~/Autolab ; sudo env PATH="$PATH" bundle exec rails server -p 15411 -e production'
 fi
 
-echo "Everything is running, and once you have pointed the elastic IP for notolab.ml at"
+echo "Everything is running, and once you have pointed the elastic IP for notolab.cs.cmu.edu at"
 echo "this instance, you should be able to access prod-notolab at this URL:"
-echo "  https://notolab.ml"
+echo "  https://notolab.cs.cmu.edu"
 echo "Once you have created and verified a user, you can promote yourself to admin"
 echo "by running this command:"
 echo "  ./promote_user your@email.goes.here"

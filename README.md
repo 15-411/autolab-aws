@@ -13,7 +13,7 @@ The following bulleted list contains a more precise description of how exactly t
   8. If you're building prod Notolab, you might want to restore database and course backups. Navigate to the S3 dashboard within AWS. You should see two buckets: one for course backups, and the other for MySQL database backups. You can find the seven most recent daily backups in these buckets. Once you have untarred the backups, you can place the course backups directly as the `Autolab/courses` directory, and you can restore the MySQL backups with the command `sudo mysql -u root -p autolab-prod < FILENAME.sql`.
   9. Once the setup is complete, you should run the `startup.sh` script that was placed in the home directory to start the web server.
   10. Navigate to the Elastic IP page of the EC2 dashboard. Point the elastic IP for dev or prod Notolab toward the new running instance.
-  11. Test that you can access the new instance at dev.notolab.ml or notolab.ml. You can terminate the old instance of dev or prod notolab, if there was one running in step 3.
+  11. Test that you can access the new instance at dev.notolab.cs.cmu.edu or notolab.cs.cmu.edu. You can terminate the old instance of dev or prod notolab, if there was one running in step 3.
 
 The secret information needed to be encoded in this repository is as follows:
   * `AWS_ACCESS_KEY`: the AWS access key for an AMI user that can build images.

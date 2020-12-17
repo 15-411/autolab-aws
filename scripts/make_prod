@@ -32,7 +32,7 @@ mysql_password=$(tr -dc 'a-f0-9' < /dev/urandom | head -c16)
 # Initialize devise for mailer.
 < Autolab/config/initializers/devise.rb.template \
   replace_config config.secret_key "''" |
-  replace_config config.mailer_sender "'creds@notolab.ml'" \
+  replace_config config.mailer_sender "'creds@notolab.cs.cmu.edu'" \
   > Autolab/config/initializers/devise.rb
 
 # Initialize mailer
@@ -41,10 +41,10 @@ mysql_password=$(tr -dc 'a-f0-9' < /dev/urandom | head -c16)
   replace_config config.action_mailer.delivery_method :smtp |
   comment_out 'config.middleware.use Rack::SslEnforcer' |
   uncomment_out config.action_mailer.default_url_options |
-  replace_config config.action_mailer.default_url_options "{protocol: 'https', host: 'notolab.ml'}" |
+  replace_config config.action_mailer.default_url_options "{protocol: 'https', host: 'notolab.cs.cmu.edu'}" |
   uncomment_out config.action_mailer.smtp_settings |
-  replace_config config.action_mailer.smtp_settings "{ address: 'email-smtp.us-east-1.amazonaws.com', port: 587, enable_starttls_auto: true, authentication: 'login', user_name: '$MAILER_USERNAME', password: '$MAILER_PASSWORD', domain: 'notolab.ml' }" |
-  replace_config sender_address "\"\\\\\\\"NOTIFIER\\\\\\\" <notifications@notolab.ml>\"," |
+  replace_config config.action_mailer.smtp_settings "{ address: 'email-smtp.us-east-1.amazonaws.com', port: 587, enable_starttls_auto: true, authentication: 'login', user_name: '$MAILER_USERNAME', password: '$MAILER_PASSWORD', domain: 'notolab.cs.cmu.edu' }" |
+  replace_config sender_address "\"\\\\\\\"NOTIFIER\\\\\\\" <notifications@notolab.cs.cmu.edu>\"," |
   replace_config exception_recipients "'$email_for_errors'" \
   > Autolab/config/environments/production.rb
 
@@ -135,7 +135,7 @@ BACKUP
 # Create site config
 cat << "CONFIG" | sudo tee /etc/nginx/sites-available/autolab
 server {
-        server_name notolab.ml www.notolab.ml prod.notolab.ml www.prod.notolab.ml;
+        server_name notolab.cs.cmu.edu www.notolab.cs.cmu.edu prod.notolab.cs.cmu.edu www.prod.notolab.cs.cmu.edu;
         location / {
                 proxy_pass http://127.0.0.1:15411;
                 proxy_set_header Host \$host;

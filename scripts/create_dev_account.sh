@@ -11,4 +11,4 @@ sqlite3 Autolab/db/db.sqlite3 << EOF
 INSERT INTO users (email, first_name, last_name, confirmed_at, administrator) VALUES ('$email', '$fn', '$ln', 1, 1);
 EOF
 
-echo "User successfully created. You can now use Developer Login with that user at dev.notolab.ml"
+echo "User successfully created. You can now use Developer Login with that user at dev.notolab.cs.cmu.edu"

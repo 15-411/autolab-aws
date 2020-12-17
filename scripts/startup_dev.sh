@@ -33,8 +33,8 @@ else
   screen -S autolab -dm bash -c 'cd ~/Autolab ; sudo env PATH="$PATH" bundle exec rails s -p 80 -b 0.0.0.0'
 fi
 
-echo "Everything is running, and once you have pointed the elastic IP for dev.notolab.ml at"
+echo "Everything is running, and once you have pointed the elastic IP for dev.notolab.cs.cmu.edu at"
 echo "this instance, you should be able to access dev-notolab at this URL:"
-echo "  https://dev.notolab.ml"
+echo "  https://dev.notolab.cs.cmu.edu"
 echo "You can run the (interactive) script ./create_dev_account to create an account you"
 echo "can log into from the 'Developer Login' page."

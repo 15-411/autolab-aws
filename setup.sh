@@ -125,7 +125,7 @@ export \\
   MAILER_USERNAME=$MAILER_USERNAME \\
   MAILER_PASSWORD=$MAILER_PASSWORD \\
   aws_region=us-east-1 \\
-  email_for_errors=nroberts@alumni.cmu.edu \\
+  email_for_errors=<FILL IN YOUR EMAIL!> \\
   s3_mysql_bucket=autolab-prod-mysql-backup \\
   s3_course_bucket=autolab-prod-course-backup \\
   ;
